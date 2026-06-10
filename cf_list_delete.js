@@ -1,37 +1,22 @@
 import {
-  deleteZeroTrustListsAtOnce,
-  deleteZeroTrustListsOneByOne,
-  getZeroTrustLists,
+  deleteZeroTrustListsBatched,
+  deleteZeroTrustListsSequential,
+  getManagedLists,
 } from "./lib/api.js";
 import { FAST_MODE } from "./lib/constants.js";
 
-(async () => {
-  const { result: lists } = await getZeroTrustLists();
+const lists = await getManagedLists();
 
-  if (!lists) {
-    console.warn(
-      "No file lists found - this is not an issue if it's your first time running this script. Exiting."
-    );
-    return;
-  }
-
-  const cgpsLists = lists.filter(({ name }) => name.startsWith("LLGP List"));
-
-  if (!cgpsLists.length) {
-    console.warn(
-      "No lists with matching name found - this is not an issue if you haven't created any filter lists before. Exiting."
-    );
-    return;
-  }
-
-  console.log(
-    `Got ${lists.length} lists, ${cgpsLists.length} of which are LLGP lists that will be deleted.`
+if (!lists.length) {
+  console.warn(
+    "No lists with matching name found - this is not an issue if you haven't created any filter lists before. Exiting."
   );
+} else {
+  console.log(`Found ${lists.length} list(s) to delete.`);
 
   if (FAST_MODE) {
-    await deleteZeroTrustListsAtOnce(cgpsLists);
-    return;
+    await deleteZeroTrustListsBatched(lists);
+  } else {
+    await deleteZeroTrustListsSequential(lists);
   }
-
-  await deleteZeroTrustListsOneByOne(cgpsLists);
-})();
+}

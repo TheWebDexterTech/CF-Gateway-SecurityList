@@ -1,4 +1,4 @@
-name: Update Filter Lists
+name: Sync Cloudflare Gateway Lists
 
 on:
   schedule:
@@ -16,51 +16,50 @@ env:
   NODE_ENV: production
 
 jobs:
-  LLGP:
+  sync:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Install Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: "lts/*"
+          node-version: 22
+          cache: npm
 
-      - name: Install npm dependencies
+      - name: Install dependencies
         run: npm ci
 
-      - name: Download allowlists
+      - name: Download allowlist
         run: npm run download:allowlist
         env:
           ALLOWLIST_URLS: ${{ vars.ALLOWLIST_URLS }}
 
-      - name: Download blocklists
+      - name: Download blocklist
         run: npm run download:blocklist
         env:
           BLOCKLIST_URLS: ${{ vars.BLOCKLIST_URLS }}
 
-      - name: Delete old rules and lists
+      - name: Remove previous lists and rule
         run: npm run cloudflare-delete
         env:
           CLOUDFLARE_API_KEY: ${{ secrets.CLOUDFLARE_API_KEY }}
           CLOUDFLARE_ACCOUNT_EMAIL: ${{ secrets.CLOUDFLARE_ACCOUNT_EMAIL }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_LIST_ITEM_LIMIT: ${{ secrets.CLOUDFLARE_LIST_ITEM_LIMIT }}
           FAST_MODE: ${{ vars.FAST_MODE }}
+          CONCURRENCY: ${{ vars.CONCURRENCY }}
 
-      - name: Create new rules and lists
+      - name: Create new lists and rule
         run: npm run cloudflare-create
         env:
           CLOUDFLARE_API_KEY: ${{ secrets.CLOUDFLARE_API_KEY }}
           CLOUDFLARE_ACCOUNT_EMAIL: ${{ secrets.CLOUDFLARE_ACCOUNT_EMAIL }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_LIST_ITEM_LIMIT: ${{ secrets.CLOUDFLARE_LIST_ITEM_LIMIT }}
+          CLOUDFLARE_LIST_ITEM_LIMIT: ${{ vars.CLOUDFLARE_LIST_ITEM_LIMIT }}
           FAST_MODE: ${{ vars.FAST_MODE }}
+          CONCURRENCY: ${{ vars.CONCURRENCY }}
 
       - name: Send ping request
-        if: env.PING_URL != ''
-        run: |
-          curl "${{ env.PING_URL }}"
-        env:
-          PING_URL: ${{ secrets.PING_URL }}
+        if: vars.PING_URL != ''
+        run: curl -fsS "${{ vars.PING_URL }}"

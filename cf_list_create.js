@@ -1,9 +1,8 @@
-import { existsSync } from "fs";
-import { resolve } from "path";
+import { resolve } from "node:path";
 
 import {
-  createZeroTrustListsAtOnce,
-  createZeroTrustListsOneByOne,
+  createZeroTrustListsBatched,
+  createZeroTrustListsSequential,
 } from "./lib/api.js";
 import {
   DRY_RUN,
@@ -20,12 +19,6 @@ import {
   readFile,
 } from "./lib/utils.js";
 
-const allowlistFilename = existsSync(PROCESSING_FILENAME.OLD_ALLOWLIST)
-  ? PROCESSING_FILENAME.OLD_ALLOWLIST
-  : PROCESSING_FILENAME.ALLOWLIST;
-const blocklistFilename = existsSync(PROCESSING_FILENAME.OLD_BLOCKLIST)
-  ? PROCESSING_FILENAME.OLD_BLOCKLIST
-  : PROCESSING_FILENAME.BLOCKLIST;
 const allowlist = new Map();
 const blocklist = new Map();
 const domains = [];
@@ -35,8 +28,8 @@ let duplicateDomainCount = 0;
 let allowedDomainCount = 0;
 
 // Read allowlist
-console.log(`Processing ${allowlistFilename}`);
-await readFile(resolve(`./${allowlistFilename}`), (line) => {
+console.log(`Processing ${PROCESSING_FILENAME.ALLOWLIST}`);
+await readFile(resolve(`./${PROCESSING_FILENAME.ALLOWLIST}`), (line) => {
   const _line = line.trim();
 
   if (!_line) return;
@@ -51,8 +44,8 @@ await readFile(resolve(`./${allowlistFilename}`), (line) => {
 });
 
 // Read blocklist
-console.log(`Processing ${blocklistFilename}`);
-await readFile(resolve(`./${blocklistFilename}`), (line, rl) => {
+console.log(`Processing ${PROCESSING_FILENAME.BLOCKLIST}`);
+await readFile(resolve(`./${PROCESSING_FILENAME.BLOCKLIST}`), (line, rl) => {
   if (domains.length === LIST_ITEM_LIMIT) {
     return;
   }
@@ -129,18 +122,12 @@ console.log(
 );
 console.log("\n\n");
 
-(async () => {
-  if (DRY_RUN) {
-    console.log(
-      "Dry run complete - no lists were created. If this was not intended, please remove the DRY_RUN environment variable and try again."
-    );
-    return;
-  }
-
-  if (FAST_MODE) {
-    await createZeroTrustListsAtOnce(domains);
-    return;
-  }
-
-  await createZeroTrustListsOneByOne(domains);
-})();
+if (DRY_RUN) {
+  console.log(
+    "Dry run complete - no lists were created. If this was not intended, please remove the DRY_RUN environment variable and try again."
+  );
+} else if (FAST_MODE) {
+  await createZeroTrustListsBatched(domains);
+} else {
+  await createZeroTrustListsSequential(domains);
+}
