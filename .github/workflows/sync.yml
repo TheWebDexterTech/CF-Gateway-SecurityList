@@ -12,24 +12,33 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 env:
   NODE_ENV: production
 
 jobs:
   sync:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
+
+      - name: Verify dependency provenance
+        # Advisory only - a registry/TUF hiccup here shouldn't block the sync.
+        continue-on-error: true
+        run: npm audit signatures
 
       - name: Download allowlist
         run: npm run download:allowlist
@@ -62,4 +71,4 @@ jobs:
 
       - name: Send ping request
         if: vars.PING_URL != ''
-        run: curl -fsS "${{ vars.PING_URL }}"
+        run: curl -fsS --max-time 10 "${{ vars.PING_URL }}"
