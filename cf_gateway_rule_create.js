@@ -1,11 +1,16 @@
-import { createZeroTrustRule, getZeroTrustLists } from "./lib/api.js";
+import { createZeroTrustRule, getManagedLists } from "./lib/api.js";
 
-const { result: lists } = await getZeroTrustLists();
-const wirefilterExpression = lists.reduce((previous, current) => {
-  if (!current.name.startsWith("LLGP List")) return previous;
+const lists = await getManagedLists();
 
-  return `${previous} any(dns.domains[*] in \$${current.id}) or `;
-}, "");
+if (!lists.length) {
+  console.warn(
+    "No filter lists found - run cf_list_create.js first. Exiting."
+  );
+} else {
+  const wirefilterExpression = lists
+    .map(({ id }) => `any(dns.domains[*] in $${id})`)
+    .join(" or ");
 
-// Remove the trailing ' or '
-await createZeroTrustRule(wirefilterExpression.slice(0, -4));
+  await createZeroTrustRule(wirefilterExpression);
+  console.log(`Created rule referencing ${lists.length} list(s).`);
+}
