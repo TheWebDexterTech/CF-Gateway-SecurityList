@@ -29,6 +29,23 @@ This project is based on
 - **Dropped legacy filename fallbacks** (`whitelist.csv` / `input.csv`) for
   a smaller, single code path.
 
+## Security
+
+- **Bounded request timeouts** - every Cloudflare API call and list download
+  aborts after 30s instead of hanging indefinitely.
+- **Validated API responses** - list IDs returned by Cloudflare are checked
+  against a UUID format before being interpolated into the Gateway rule's
+  wirefilter expression.
+- **Hardened CI** - the workflow runs with read-only `GITHUB_TOKEN`
+  permissions, a 15-minute job timeout, `npm ci --ignore-scripts`, and
+  `npm audit signatures` to verify package provenance.
+- **Pinned, current Actions** - `actions/checkout@v5` and
+  `actions/setup-node@v5` (Node 24 runners).
+- **Dependabot** keeps npm dependencies and GitHub Actions up to date
+  weekly (`.github/dependabot.yml`).
+- **CodeQL** static analysis runs on every push/PR to `main` and weekly.
+- See [`SECURITY.md`](SECURITY.md) for the vulnerability reporting policy.
+
 ## About the individual scripts
 
 - `download_lists.js` - downloads and merges allow/block list sources.
