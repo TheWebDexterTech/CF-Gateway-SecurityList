@@ -8,6 +8,49 @@ job runs on free GitHub Actions minutes.
 This project is based on
 [`mrrfv/cloudflare-gateway-pihole-scripts`](https://github.com/mrrfv/cloudflare-gateway-pihole-scripts).
 
+## Default protection for the team
+
+Out of the box, every device on your Cloudflare Gateway location gets up to
+**300,000 blocked domains** (the Zero Trust free-plan list cap,
+`CLOUDFLARE_LIST_ITEM_LIMIT`) covering ads, trackers, malware-adjacent
+"badware" hosts, and gambling - with no per-employee setup. This is meant to
+complement, not replace, Cloudflare's built-in **Security/Malware** Gateway
+category (enable separately in the dashboard): Cloudflare's own threat feeds
+handle active malware/phishing/C2, while the lists below handle ads,
+trackers, and workplace-policy domains.
+
+### Blocklist sources (`RECOMMENDED_BLOCKLIST_URLS`)
+
+Listed in the order they're processed. Order matters because `hagezi multi`
+alone is larger than the entire 300k cap - it's placed last so it fills
+whatever budget remains, guaranteeing the more curated lists above it are
+always included in full.
+
+| Source | What it blocks | Why it's here |
+| --- | --- | --- |
+| [StevenBlack/hosts](https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts) | Ads, malware and tracking domains (aggregates several long-standing lists) | Widely-used, low-false-positive baseline - the foundation every employee gets |
+| [AdGuard SDNS Filter](https://adguardteam.github.io/AdGuardSDNSFilter/Filters/filter.txt) | Ads and trackers across browsers, desktop apps and mobile | DNS-level filtering catches ads/trackers that browser extensions miss, on every device, with no install |
+| [oisd big](https://big.oisd.nl/domainswild2) | Comprehensive ads, trackers and malware-adjacent domains | One of the most thorough, actively-curated blocklists, tuned to avoid breaking legitimate SaaS/business sites |
+| [Mullvad: gambling](https://raw.githubusercontent.com/mullvad/dns-blocklists/main/output/doh/doh_gambling.txt) | Online gambling sites | Workplace-policy block - keeps gambling off company devices and network, no HR/compliance config needed |
+| [HaGeZi multi](https://raw.githubusercontent.com/hagezi/dns-blocklists/main/domains/multi.txt) | Ads, tracking, affiliate links, badware hosters, scam/phishing, smart-TV trackers, suspicious TLDs | Broadest catch-all layer; absorbs whatever room is left in the 300k budget |
+
+### Allowlist sources (`RECOMMENDED_ALLOWLIST_URLS`)
+
+These run first and prevent the blocklists above from breaking tools the
+team relies on day to day.
+
+| Source | What it allows | Why it's here |
+| --- | --- | --- |
+| [NextDNS click-tracking-domains](https://raw.githubusercontent.com/nextdns/click-tracking-domains/main/domains) | Email/marketing click-tracking redirect domains | Keeps links in legitimate emails - invoices, SaaS notifications, newsletters - clickable |
+| [AdGuard HttpsExclusions: banks](https://raw.githubusercontent.com/AdguardTeam/HttpsExclusions/master/exclusions/banks.txt) | Banking and financial institution domains | Avoids breaking online banking, payroll and expense tools |
+| [Dogino Discord-Phishing-URLs (official domains)](https://raw.githubusercontent.com/Dogino/Discord-Phishing-URLs/main/official-domains.txt) | Discord's own domains | Stops Discord - common for team chat/communities - from being caught by phishing lists |
+| [HaGeZi whitelist-referral](https://raw.githubusercontent.com/hagezi/dns-blocklists/main/whitelist-referral.txt) | Commonly over-blocked referral/redirect domains | Curated fixes for redirects frequently broken by ad/tracker blocklists |
+| [AdGuard HttpsExclusions: mac](https://raw.githubusercontent.com/AdguardTeam/HttpsExclusions/master/exclusions/mac.txt) | Apple/macOS system and update domains | Keeps company Macs updating and functioning correctly |
+| [HaGeZi whitelist](https://raw.githubusercontent.com/hagezi/dns-blocklists/main/whitelist.txt) | General over-blocking fixes | HaGeZi's maintained list of domains that ad/tracker blocklists commonly break |
+
+To use your own sources instead, set the `BLOCKLIST_URLS` / `ALLOWLIST_URLS`
+repository variables (one URL per line) - see [Setup](#setup-github-actions).
+
 ## Recent improvements
 
 - **No `node-fetch`** - relies on Node's native `fetch`/streams (Node >= 20).
